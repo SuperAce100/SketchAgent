@@ -369,6 +369,49 @@ def parse_xml_string_single_stroke(llm_output, res, stroke_counter):
     return strokes_list, t_values_list
 
 
+def parse_xml_with_ids(llm_output, res):
+    """Parse XML with stroke IDs"""
+    import xml.etree.ElementTree as ET
+    import re
+    
+    strokes_start_marker = "<strokes>"
+    strokes_end_marker = "</strokes>"
+    
+    start_index = llm_output.find(strokes_start_marker)
+    if start_index == -1:
+        return None, None, None
+    
+    end_index = llm_output.find(strokes_end_marker, start_index)
+    if end_index == -1:
+        return None, None, None
+    
+    strokes_str = llm_output[start_index:end_index + len(strokes_end_marker)].strip()
+    xml_str = f"<wrap>{strokes_str}</wrap>"
+    root = ET.fromstring(xml_str)
+    
+    strokes_list = "[\n"
+    t_values_list = "[\n"
+    id_list = "[\n"
+    
+    for stroke in root.find('strokes'):
+        points_text = stroke.find('points').text
+        t_values_text = stroke.find('t_values').text
+        id_text = stroke.find('id').text if stroke.find('id') is not None else ""
+        
+        strokes_list += f"[{points_text}],\n"
+        t_values_list += f"[{t_values_text}],\n"
+        id_list += f"'{id_text}',\n"
+    
+    strokes_list = re.sub(r'\d+', lambda x: str(min(int(x.group()), res)), strokes_list)
+    strokes_list = re.sub(r'\d+', lambda x: str(max(int(x.group()), 1)), strokes_list)
+    
+    strokes_list += "]"
+    t_values_list += "]"
+    id_list += "]"
+    
+    return strokes_list, t_values_list, id_list
+
+
 # =====================================
 # ===== Collaborative Sketching =======
 # =====================================
