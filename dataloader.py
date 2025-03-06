@@ -268,7 +268,7 @@ if __name__ == "__main__":
     plt.gca().spines['left'].set_visible(False)
     plt.gca().spines['bottom'].set_visible(False)
     plt.ylim(min(similarities)*0.9, min(max(similarities)*1.1, 1))
-    plt.title(f'Categories Most Similar to {args.concept.capitalize()}', fontweight='bold', fontsize=14)
+    plt.title(f'Categories most similar to {args.concept.capitalize()}', fontweight='bold', fontsize=14)
     plt.tight_layout()
     plt.show()
 
@@ -277,7 +277,6 @@ if __name__ == "__main__":
 
     # Process categories in parallel
     with ThreadPoolExecutor() as executor:
-        
         # Submit all tasks and collect results
         future_to_category = {executor.submit(quickdraw_to_dsl_file_pick_random, category): category for category in categories}
         

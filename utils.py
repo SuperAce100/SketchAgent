@@ -1,4 +1,5 @@
 import json
+import tempfile
 import xml.etree.ElementTree as ET
 import re
 import numpy as np
@@ -514,7 +515,7 @@ def show_dsl_popup(dsl, res, cell_size, stroke_width, title=""):
         import matplotlib.pyplot as plt
 
         # Convert SVG to PNG
-        temp_png = "temp.png"
+        temp_png = tempfile.NamedTemporaryFile(suffix=".png").name
         cairosvg.svg2png(bytestring=svg_content.encode('utf-8'), write_to=temp_png)
 
         # Display image

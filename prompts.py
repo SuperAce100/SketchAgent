@@ -197,3 +197,10 @@ and here is the complete example:
 </strokes>
 </example>
 """
+
+icl_example = """
+{gt_example}
+
+Here are some other examples of sketches of similar concepts:
+{examples}
+"""
