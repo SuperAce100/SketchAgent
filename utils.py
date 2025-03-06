@@ -500,3 +500,28 @@ def save_results(output_path, concept, llm_output, messages, strokes_list, t_val
     }
     with open(f"{output_path}/experiment_log.json", "w") as f:
         json.dump(log_data, f, indent=4)
+
+
+def show_dsl_popup(dsl, res, cell_size, stroke_width):
+    grid_size = (res + 1) * cell_size
+    cells_to_pixels_map = cells_to_pixels(res, cell_size, header_size=cell_size)
+    # Process and save results
+    result = parse_dsl(dsl, res, cells_to_pixels_map, grid_size, stroke_width)
+    if result:
+        _, _, svg_content = result
+        
+        from PIL import Image
+        import matplotlib.pyplot as plt
+
+        # Convert SVG to PNG
+        temp_png = "temp.png"
+        cairosvg.svg2png(bytestring=svg_content.encode('utf-8'), write_to=temp_png)
+
+        # Display image
+        img = Image.open(temp_png)
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+    
+    else:
+        print("Error: No valid sketch DSL found in LLM output")

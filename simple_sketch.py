@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--stroke_width', type=float, default=7.0, help="Stroke width for SVG")
     return parser.parse_args()
 
-def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke_width: float) -> None:
+def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke_width: float, examples: str=gt_example) -> None:
     """
     Make a sketch for a given concept.
 
@@ -30,12 +30,9 @@ def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke
     output_path = f"{output_path}/{concept.replace(' ', '_')}"
     os.makedirs(output_path, exist_ok=True)
 
-    grid_size = (res + 1) * cell_size
-    grid_image, positions = utils.create_grid_image(res=res, cell_size=cell_size, header_size=cell_size)
-    cells_to_pixels_map = utils.cells_to_pixels(res, cell_size, header_size=cell_size)
         
     # LLM Call
-    prompt = sketch_first_prompt.format(concept=concept, gt_sketches_str=gt_example)
+    prompt = sketch_first_prompt.format(concept=concept, examples=examples)
     system = system_prompt.format(res=res)
     messages = [
         {"role": "system", "content": system},
@@ -44,6 +41,9 @@ def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke
     llm_output = llm_call(prompt=prompt, system_prompt=system)
     messages.append({"role": "assistant", "content": llm_output})
     
+    grid_size = (res + 1) * cell_size
+    grid_image, positions = utils.create_grid_image(res=res, cell_size=cell_size, header_size=cell_size)
+    cells_to_pixels_map = utils.cells_to_pixels(res, cell_size, header_size=cell_size)
     # Process and save results
     result = utils.parse_dsl(llm_output, res, cells_to_pixels_map, grid_size, stroke_width)
     if result:

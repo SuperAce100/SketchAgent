@@ -1,7 +1,7 @@
 sketch_first_prompt = """I provide you with a blank grid. Your goal is to produce a visually appealing sketch of a {concept}.
 Here are a few examples:
 <examples>
-{gt_sketches_str}
+{examples}
 </examples>
 
 You need to provide x-y coordinates that construct a recognizable sketch of a {concept}.
