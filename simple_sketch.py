@@ -1,3 +1,6 @@
+import os
+os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
+
 import argparse
 import os
 import json

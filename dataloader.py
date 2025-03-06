@@ -1,4 +1,5 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import random
 from typing import Dict, List
 import json
 import argparse
@@ -33,22 +34,57 @@ def generate_embeddings(categories: str):
     """
     Uses OpenAI API to get embeddings for each category
     """
+    import os
+    
     categories = categories.split(", ")
     embeddings = {}
     
-    def process_category(category):
-        embedding = generate_embedding(category)
-        return category, embedding
+    # Check if embeddings cache exists
+    os.makedirs(".cache", exist_ok=True)
+    cache_path = ".cache/embeddings.json"
     
-    with ThreadPoolExecutor() as executor:
-        results = list(tqdm(
-            executor.map(process_category, categories),
-            total=len(categories),
-            desc="Generating embeddings"
-        ))
+    # Try to load from cache first
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as f:
+                cached_embeddings = json.load(f)
+                
+            # Only process categories not in cache
+            categories_to_process = [c for c in categories if c not in cached_embeddings]
+            embeddings = {k: v for k, v in cached_embeddings.items() if k in categories}
+            print(f"Loaded {len(embeddings)} embeddings from cache")
+        except Exception as e:
+            print(f"Error loading embeddings cache: {e}")
+            categories_to_process = categories
+    else:
+        categories_to_process = categories
+    
+    if categories_to_process:
+        def process_category(category):
+            embedding = generate_embedding(category)
+            return category, embedding
         
-    for category, embedding in results:
-        embeddings[category] = embedding
+        with ThreadPoolExecutor() as executor:
+            results = list(tqdm(
+                executor.map(process_category, categories_to_process),
+                total=len(categories_to_process),
+                desc="Generating embeddings"
+            ))
+            
+        # Update embeddings with new results
+        for category, embedding in results:
+            embeddings[category] = embedding
+            
+        # Update cache with all embeddings
+        try:
+            all_embeddings = cached_embeddings if 'cached_embeddings' in locals() else {}
+            all_embeddings.update(embeddings)
+            
+            with open(cache_path, "w") as f:
+                json.dump(all_embeddings, f)
+        except Exception as e:
+            print(f"Error saving embeddings cache: {e}")
+    
     return embeddings
 
 def cosine_similarity(a: Dict[str, float], b: List[float]):
@@ -169,21 +205,38 @@ def quickdraw_to_dsl(drawing, res):
 def quickdraw_to_dsl_file(concept: str):
     sketches = []
     with open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r") as f:
-        for line in f:
-            data = json.loads(line)
-            strokes = data["drawing"]
-            smoothed_strokes = smooth_quickdraw_drawing(strokes)
-            dsl_output = quickdraw_to_dsl(smoothed_strokes, 50)
-            sketches.append(dsl_output)
-
+        # Count number of lines in the file
+        total_lines = sum(1 for _ in open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r"))
+        
+        # Reopen the file for processing
+        with open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r") as count_f:
+            for line in tqdm(count_f, desc=f"Converting {concept} to DSL", total=total_lines):
+                data = json.loads(line)
+                strokes = data["drawing"]
+                smoothed_strokes = smooth_quickdraw_drawing(strokes)
+                dsl_output = quickdraw_to_dsl(smoothed_strokes, 50)
+                sketches.append(dsl_output)
     return sketches
 
-
-
-
-
-
-
+def quickdraw_to_dsl_file_pick_random(concept: str):
+    sketches = []
+    with open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r") as f:
+        # Count number of lines in the file
+        total_lines = sum(1 for _ in open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r"))
+        
+        # Pick a random line number
+        random_line = random.randint(0, total_lines - 1)
+        
+        # Read the random line
+        for i, line in tqdm(enumerate(f), desc=f"Finding random {concept}", total=random_line):
+            if i == random_line:
+                data = json.loads(line)
+                strokes = data["drawing"]
+                smoothed_strokes = smooth_quickdraw_drawing(strokes)
+                dsl_output = quickdraw_to_dsl(smoothed_strokes, 50)
+                sketches.append(dsl_output)
+                break
+    return random.choice(sketches)
 
 # ================================
 # Main Section
@@ -192,36 +245,48 @@ def quickdraw_to_dsl_file(concept: str):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--concept", type=str, default="airplane", help="Concept to convert to DSL")
-    parser.add_argument("--n", type=int, default=10, help="Number of most similar categories to plot")
+    parser.add_argument("--examples", type=int, default=3, help="Number of examples to show")
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    categories = load_categories()
-    if args.concept not in categories:
-        print(f"Error:Concept '{args.concept}' is not part of the QuickDraw dataset")
-        exit(1)
 
-    most_similar = most_similar_categories(args.concept, n=args.n)
-    print(most_similar)
+    most_similar = most_similar_categories(args.concept, n=args.examples)
+    print(f"Most similar categories to '{args.concept}':")
+    for i, (category, similarity) in enumerate(most_similar, 1):
+        print(f"  {i}. {category}: {similarity[0]:.4f}")
     # Plot most similar categories as a bar chart
     plt.figure(figsize=(10, 6))
     plt.rcParams['font.family'] = 'Inter'
     categories = [cat for cat, _ in most_similar]
     similarities = [sim[0] for _, sim in most_similar]
-    plt.bar(categories, similarities, color='skyblue')
-    plt.xlabel('Categories')
-    plt.ylabel('Similarity Score')
-    plt.title(f'Categories Most Similar to "{args.concept}"')
-    plt.xticks(rotation=45, ha='right')
+
+    plt.bar(categories, similarities)
+    plt.ylabel('Cosine Similarity', fontweight='bold')
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    plt.gca().spines['left'].set_visible(False)
+    plt.gca().spines['bottom'].set_visible(False)
+    plt.ylim(min(similarities)*0.9, min(max(similarities)*1.1, 1))
+    plt.title(f'Categories Most Similar to {args.concept.capitalize()}', fontweight='bold', fontsize=14)
     plt.tight_layout()
     plt.show()
 
 
+    examples = []
 
+    # Process categories in parallel
+    with ThreadPoolExecutor() as executor:
+        
+        # Submit all tasks and collect results
+        future_to_category = {executor.submit(quickdraw_to_dsl_file_pick_random, category): category for category in categories}
+        
+        for future in as_completed(future_to_category):
+            result = future.result()
+            category = future_to_category[future]
+            examples.append((category, result))
+            utils.show_dsl_popup(result, 50, 12, 7, title=category)
+    
 
-    # sketches = quickdraw_to_dsl_file(args.concept)
-    # for sketch in sketches[:10]:
-    #     utils.show_dsl_popup(sketch, 50, 12, 7)
     
     

@@ -502,7 +502,7 @@ def save_results(output_path, concept, llm_output, messages, strokes_list, t_val
         json.dump(log_data, f, indent=4)
 
 
-def show_dsl_popup(dsl, res, cell_size, stroke_width):
+def show_dsl_popup(dsl, res, cell_size, stroke_width, title=""):
     grid_size = (res + 1) * cell_size
     cells_to_pixels_map = cells_to_pixels(res, cell_size, header_size=cell_size)
     # Process and save results
@@ -521,6 +521,8 @@ def show_dsl_popup(dsl, res, cell_size, stroke_width):
         img = Image.open(temp_png)
         plt.imshow(img)
         plt.axis('off')
+        plt.title(title.capitalize(), fontweight='bold', fontsize=14)
+        plt.rcParams['font.family'] = 'Inter'
         plt.show()
     
     else:
