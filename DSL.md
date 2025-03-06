@@ -1,10 +1,5 @@
 # Sketch DSL Documentation
 
-This document describes the Domain Specific Language (DSL) used for generating vector sketches through the gen_sketch.py script.
-
-## Overview
-The DSL is XML-based and defines strokes and their properties for creating vector sketches. It's used as the output format from the LLM and is parsed into SVG format.
-
 ## Basic Structure
 The DSL follows this basic structure:
 ```xml
@@ -22,6 +17,9 @@ The DSL follows this basic structure:
 ```
 
 ## Elements
+
+### `<concept>`
+- Explains the overall concept of the sketch
 
 ### `<strokes>`
 - Root element containing all stroke definitions
@@ -45,31 +43,23 @@ The DSL follows this basic structure:
 - Values are floats between 0 and 1
 - Used for calculating the curve between control points
 
+### `<id>`
+- Semantic identifier for the stroke
+
 ## Example
 For a simple two-stroke sketch:
 ```xml
+<concept>airplane</concept>
 <strokes>
   <s1>
     <points>x1y1,x2y2,x3y3</points>
     <t_values>0.0,0.5,1.0</t_values>
+    <id>first stroke</id>
   </s1>
   <s2>
     <points>x4y4,x5y5</points>
     <t_values>0.0,1.0</t_values>
+    <id>second stroke</id>
   </s2>
 </strokes>
 ```
-
-## Processing Flow
-1. LLM generates DSL output
-2. DSL is parsed into control points and t-values
-3. Control points are converted to pixel coordinates
-4. Bézier curves are calculated
-5. SVG paths are generated from the curves
-6. Final SVG is created with all strokes
-
-## Constraints
-- Coordinates are clamped to grid bounds (1 to res)
-- t_values must match the number of points
-- Stroke numbers must be sequential
-- All elements must be properly closed
