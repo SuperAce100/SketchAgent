@@ -1,10 +1,12 @@
+import json
 import xml.etree.ElementTree as ET
 import re
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import base64
-
+import ast
+import cairosvg
 
 # =========================
 # ===== Grid related ======
@@ -433,3 +435,68 @@ def get_cur_stroke_text(stroke_counter, llm_output):
     # Extract the JSON string
     strokes_str = llm_output[start_index:end_index + len(end_marker)].strip()#[:-1]
     return strokes_str
+
+# =====================================
+# ===== DSL related ====================
+# =====================================
+
+def parse_dsl(dsl, res, cells_to_pixels_map, grid_size, stroke_width):
+    """
+    Parse the DSL output from the LLM and return the strokes, t_values, and SVG content.
+    """
+
+    if "<strokes>" not in dsl or "</strokes>" not in dsl:
+        return None
+
+    strokes_list_str, t_values_str = parse_xml_string(dsl, res)
+    
+    strokes_list = ast.literal_eval(strokes_list_str)
+    t_values = ast.literal_eval(t_values_str)
+    
+    control_points = get_control_points(strokes_list, t_values, cells_to_pixels_map)
+    svg_content = format_svg(control_points, dim=(grid_size, grid_size), stroke_width=stroke_width)
+    
+    return strokes_list, t_values, svg_content
+
+
+def save_results(output_path, concept, llm_output, messages, strokes_list, t_values, svg_content, grid_image):
+    """
+    Save the results of the experiment.
+    Saves the following files:
+    - `llm_output.txt`
+    - `svg_content.svg`
+    - `png_content.png`
+    - `canvas_content.png`
+    - `experiment_log.json`
+    """
+
+    # Save raw LLM output
+    with open(f"{output_path}/llm_output.txt", "w") as f:
+        f.write(llm_output)
+
+    # Save SVG
+    svg_path = f"{output_path}/{concept.replace(' ', '_')}.svg"
+    with open(svg_path, "w") as f:
+        f.write(svg_content)
+
+    # Generate PNG
+    png_path = f"{output_path}/{concept.replace(' ', '_')}.png"
+    cairosvg.svg2png(url=svg_path, write_to=png_path, background_color="white")
+
+    # Generate PNG with grid
+    canvas_png_path = f"{output_path}/{concept.replace(' ', '_')}_canvas.png"
+    cairosvg.svg2png(url=svg_path, write_to=canvas_png_path)
+    foreground = Image.open(canvas_png_path)
+    grid_image.paste(Image.open(canvas_png_path), (0, 0), foreground)
+    grid_image.save(canvas_png_path)
+
+    # Save experiment log
+    log_data = {
+        "concept": concept,
+        "messages": messages,
+        "llm_output": llm_output,
+        "strokes": strokes_list,
+        "t_values": t_values
+    }
+    with open(f"{output_path}/experiment_log.json", "w") as f:
+        json.dump(log_data, f, indent=4)

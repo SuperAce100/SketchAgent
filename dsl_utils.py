@@ -1,3 +1,6 @@
+import json
+
+
 def format_strokes_to_dsl(strokes_data):
     """
     Convert stroke data to DSL format string
@@ -36,18 +39,12 @@ def format_strokes_to_dsl(strokes_data):
 
 # Example usage
 if __name__ == "__main__":
-    example_strokes = [
-        [
-            [1, 2, 3, 4],  # x coords
-            [5, 6, 7, 8],  # y coords 
-            [0.0, 0.3, 0.7, 1.0]  # t values
-        ],
-        [
-            [10, 11, 12],
-            [20, 21, 22],
-            [0.0, 0.5, 1.0]
-        ]
-    ]
+    with open(".data/quickdraw_dataset/simplified/car.ndjson", "r") as f:
+        for line in f:
+            data = json.loads(line)
+            strokes = data["drawing"]
+            dsl_output = format_strokes_to_dsl(strokes)
+            print(dsl_output)
     
     dsl_output = format_strokes_to_dsl(example_strokes)
     print(dsl_output) 
