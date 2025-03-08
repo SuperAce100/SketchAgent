@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('--stroke_width', type=float, default=7.0, help="Stroke width for SVG")
     return parser.parse_args()
 
-def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke_width: float, examples: str=gt_example) -> None:
+def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke_width: float, examples: str=gt_example, model: str="openai/gpt-4o") -> None:
     """
     Make a sketch for a given concept.
 
@@ -41,7 +41,7 @@ def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke
         {"role": "system", "content": system},
         {"role": "user", "content": prompt}
     ]
-    llm_output = llm_call(prompt=prompt, system_prompt=system)
+    llm_output = llm_call(prompt=prompt, system_prompt=system, model=model)
     messages.append({"role": "assistant", "content": llm_output})
     
     grid_size = (res + 1) * cell_size

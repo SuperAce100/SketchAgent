@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument('--res', type=int, default=50, help="Grid resolution")
     parser.add_argument('--cell_size', type=int, default=12, help="Cell size in pixels")
     parser.add_argument('--stroke_width', type=float, default=7.0, help="Stroke width for SVG")
+    parser.add_argument('--model', type=str, default="anthropic/claude-3.5-sonnet", help="Model to use")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -57,4 +58,4 @@ if __name__ == "__main__":
 
     icl_prompt = icl_example.format(gt_example=gt_example, examples=examples_prompt)
     print("Generating sketch for concept: ", args.concept)
-    make_sketch(args.concept, args.output_dir, args.res, args.cell_size, args.stroke_width, icl_prompt)
+    make_sketch(args.concept, args.output_dir, args.res, args.cell_size, args.stroke_width, icl_prompt, args.model)
