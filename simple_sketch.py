@@ -54,8 +54,8 @@ def make_sketch(concept: str, output_path: str, res: int, cell_size: int, stroke
         utils.save_results(output_path, concept, llm_output, messages, strokes_list, t_values, svg_content, grid_image)
         print(f"Sketch generation complete! Results saved to {output_path}")
     else:
-        print("Error: No valid sketch DSL found in LLM output")
-
+        print("Error: No valid sketch DSL found in LLM output:")
+        print(llm_output)
 def main():
     args = parse_args()
     make_sketch(args.concept, args.output_dir, args.res, args.cell_size, args.stroke_width)

@@ -36,6 +36,9 @@ if __name__ == "__main__":
     args = parse_args()
     examples = choose_examples(args.concept, args.examples)
     examples_prompt = "\n".join([format_example(example) for example in examples])
+    for category, example in examples:
+        utils.show_dsl_popup(example)
+
     icl_prompt = icl_example.format(gt_example=gt_example, examples=examples_prompt)
     print("Generating sketch for concept: ", args.concept)
     make_sketch(args.concept, args.output_dir, args.res, args.cell_size, args.stroke_width, icl_prompt)

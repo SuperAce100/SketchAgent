@@ -528,3 +528,5 @@ def show_dsl_popup(dsl, res, cell_size, stroke_width, title=""):
     
     else:
         print("Error: No valid sketch DSL found in LLM output")
+        print(dsl)
+

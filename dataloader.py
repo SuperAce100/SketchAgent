@@ -221,22 +221,34 @@ def quickdraw_to_dsl_file(concept: str):
 def quickdraw_to_dsl_file_pick_random(concept: str):
     sketches = []
     with open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r") as f:
-        # Count number of lines in the file
-        total_lines = sum(1 for _ in open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r"))
+        # First pass: collect all recognized line numbers
+        recognized_lines = []
+        total_lines = 0
+        with open(f"{QUICKDRAW_DATASET_PATH}/{concept}.ndjson", "r") as temp_f:
+            for i, line in enumerate(temp_f):
+                data = json.loads(line)
+                if data["recognized"]:
+                    recognized_lines.append(i)
+                total_lines += 1
+
+        if not recognized_lines:
+            raise ValueError(f"No recognized drawings found for {concept}")
         
-        # Pick a random line number
-        random_line = random.randint(0, total_lines - 1)
         
-        # Read the random line
-        for i, line in tqdm(enumerate(f), desc=f"Finding random {concept}", total=random_line):
+        # Pick a random recognized line
+        random_line = random.choice(recognized_lines)
+        f.seek(0)  # Reset file pointer
+        
+        # Get the selected line
+        for i, line in enumerate(f):
             if i == random_line:
                 data = json.loads(line)
                 strokes = data["drawing"]
                 smoothed_strokes = smooth_quickdraw_drawing(strokes)
                 dsl_output = quickdraw_to_dsl(smoothed_strokes, 50)
-                sketches.append(dsl_output)
-                break
-    return random.choice(sketches)
+                return dsl_output, i
+
+    return random.choice(sketches), random_line
 
 # ================================
 # Main Section
@@ -251,40 +263,29 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    most_similar = most_similar_categories(args.concept, n=args.examples)
-    print(f"Most similar categories to '{args.concept}':")
-    for i, (category, similarity) in enumerate(most_similar, 1):
-        print(f"  {i}. {category}: {similarity[0]:.4f}")
-    # Plot most similar categories as a bar chart
-    plt.figure(figsize=(10, 6))
-    plt.rcParams['font.family'] = 'Inter'
-    categories = [cat for cat, _ in most_similar]
-    similarities = [sim[0] for _, sim in most_similar]
+    chosen_categories = ["car", "lighthouse", "tree", "cactus", "clock", "ice cream", "dog", "chair", "umbrella"]
 
-    plt.bar(categories, similarities)
-    plt.ylabel('Cosine Similarity', fontweight='bold')
-    plt.gca().spines['top'].set_visible(False)
-    plt.gca().spines['right'].set_visible(False)
-    plt.gca().spines['left'].set_visible(False)
-    plt.gca().spines['bottom'].set_visible(False)
-    plt.ylim(min(similarities)*0.9, min(max(similarities)*1.1, 1))
-    plt.title(f'Categories most similar to {args.concept.capitalize()}', fontweight='bold', fontsize=14)
-    plt.tight_layout()
-    plt.show()
+    n_trials = 10
+    from concurrent.futures import ThreadPoolExecutor
 
-
-    examples = []
-
-    # Process categories in parallel
+    sketches = []
     with ThreadPoolExecutor() as executor:
-        # Submit all tasks and collect results
-        future_to_category = {executor.submit(quickdraw_to_dsl_file_pick_random, category): category for category in categories}
+        futures = []
+        for category in chosen_categories:
+            for i in range(n_trials):
+                futures.append(executor.submit(quickdraw_to_dsl_file_pick_random, category))
         
-        for future in as_completed(future_to_category):
-            result = future.result()
-            category = future_to_category[future]
-            examples.append((category, result))
-            utils.show_dsl_popup(result, 50, 12, 7, title=category)
+        for idx, future in tqdm(enumerate(futures), total=len(futures), desc="Processing categories"):
+            category = chosen_categories[idx // n_trials]
+            dsl_output, line_number = future.result()
+            sketches.append((dsl_output, category, line_number))
+
+    for sketch, category, line_number in sketches:
+        utils.show_dsl_popup(
+            sketch,
+            50, 12, 7,
+            title=category + f" {line_number}"
+        )
     
 
     
