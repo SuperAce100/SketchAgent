@@ -5,22 +5,38 @@ import utils
 import matplotlib.pyplot as plt
 from simple_sketch import make_sketch
 from prompts import gt_example, icl_example
+import json
+import random
 
 def choose_examples(concept: str, n: int):
-    most_similar = dataloader.most_similar_categories(concept, n=n)
-    categories = [cat for cat, _ in most_similar]
+    # Load examples from JSON
+    with open("examples.json", "r") as f:
+        examples_data = json.load(f)
+    
+    # Get embeddings for all example concepts
+    example_concepts = list(examples_data.keys())
+    concept_embeddings = dataloader.generate_embeddings(", ".join(example_concepts))
+    
+    # Get embedding for target concept
+    target_embedding = dataloader.generate_embedding(concept)[0]
+    
+    # Calculate similarities
+    similarities = dataloader.cosine_similarity(concept_embeddings, target_embedding)
+    
+    # Sort by similarity and take top n
+    sorted_examples = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[:n]
+    
+    # Return random example from each similar concept
     examples = []
-    with ThreadPoolExecutor() as executor:
-        future_to_category = {executor.submit(dataloader.quickdraw_to_dsl_file_pick_random, category): category for category in categories}
-        for future in as_completed(future_to_category):
-            result = future.result()
-            category = future_to_category[future]
-            examples.append((category, result))
+    for concept, _ in sorted_examples:
+        example_dsl = random.choice(examples_data[concept])
+        examples.append((concept, example_dsl))
+    
     return examples
 
 def format_example(example: tuple):
     category, dsl = example
-    return f"<example>\n<concept>{category}</concept>\n{dsl}\n</example>"
+    return f"<example>{dsl}\n</example>"
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -37,7 +53,7 @@ if __name__ == "__main__":
     examples = choose_examples(args.concept, args.examples)
     examples_prompt = "\n".join([format_example(example) for example in examples])
     for category, example in examples:
-        utils.show_dsl_popup(example)
+        utils.show_dsl_popup(example, args.res, args.cell_size, args.stroke_width, category)
 
     icl_prompt = icl_example.format(gt_example=gt_example, examples=examples_prompt)
     print("Generating sketch for concept: ", args.concept)
