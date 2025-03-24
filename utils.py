@@ -293,14 +293,12 @@ def parse_xml_string(llm_output, res):
     strokes_start_marker = "<strokes>"
     strokes_end_marker = "</strokes>"
 
-    # Find the start and end indices of the JSON string
-    start_index = llm_output.find(strokes_start_marker)
-    if start_index != -1:
-        # start_index += len(strokes_start_marker)  # Move past the marker
-        end_index = llm_output.find(strokes_end_marker, start_index)
-    else:
-        return None  # XML markers not found
+    # Find the last occurrence of the tags
+    start_index = llm_output.rfind(strokes_start_marker)
+    if start_index == -1:
+        return None  # Start marker not found
 
+    end_index = llm_output.rfind(strokes_end_marker, start_index)
     if end_index == -1:
         return None  # End marker not found
 
@@ -308,6 +306,9 @@ def parse_xml_string(llm_output, res):
     strokes_str = llm_output[start_index:end_index + len(strokes_end_marker)].strip()#[:-1]
     xml_str = f"<wrap>{strokes_str}</wrap>"
     # Parse the XML string
+
+    # print(strokes_str)
+
     root = ET.fromstring(xml_str)
     
     # Initialize lists to hold strokes and t_values
@@ -316,11 +317,17 @@ def parse_xml_string(llm_output, res):
     
     # Iterate over all the strokes
     for stroke in root.find('strokes'):
-        # Extract points and clean them up
+        # Extract points and join them with commas
         points_text = stroke.find('points').text
+
+        if ',' not in points_text:
+            points_text = points_text.replace(' ', ',')
     
         # Extract t_values and convert them to float
         t_values_text = stroke.find('t_values').text
+
+        if ',' not in t_values_text:
+            t_values_text = t_values_text.replace(' ', ',')
     
         # Append to the lists
         strokes_list += f"[{points_text}],\n"
@@ -331,6 +338,8 @@ def parse_xml_string(llm_output, res):
     
     strokes_list += "]"
     t_values_list += "]"
+    # print(strokes_list)
+    # print(t_values_list)
     return strokes_list, t_values_list
 
 
