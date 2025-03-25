@@ -206,7 +206,7 @@ Here is an example of what a tutorial for drawing a house looks like:
 
 {example}
 
-Think step-by-step. Before you start the tutorial, express your thoughts in <thinking>...</thinking> tags.
+Think step-by-step. Before you start the tutorial, express your thoughts in <thinking>...</thinking> tags. If you don't finish, add the string "[NOT DONE]" at the end of your response.
 """
 
 

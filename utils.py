@@ -333,8 +333,9 @@ def parse_xml_string(llm_output, res):
         strokes_list += f"[{points_text}],\n"
         t_values_list += f"[{t_values_text}],\n"
     
-    strokes_list = re.sub(r'\d+', lambda x: str(min(int(x.group()), res)), strokes_list)
-    strokes_list = re.sub(r'\d+', lambda x: str(max(int(x.group()), 1)), strokes_list)
+    # Handle both integers and floats, ensuring they're within bounds
+    strokes_list = re.sub(r'\d+(\.\d+)?', lambda x: str(min(int(float(x.group())), res)), strokes_list)
+    strokes_list = re.sub(r'\d+(\.\d+)?', lambda x: str(max(int(float(x.group())), 1)), strokes_list)
     
     strokes_list += "]"
     t_values_list += "]"
