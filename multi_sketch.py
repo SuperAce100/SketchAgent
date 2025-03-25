@@ -85,16 +85,24 @@ def n_sketches(n: int, concept: str, model: str="anthropic/claude-3.5-sonnet"):
     Make n sketches for a given concept.
     """
     results = []
+
+    def make_sketch_wrapper(concept, RES, CELL_SIZE, STROKE_WIDTH, model):
+        try:
+            return make_sketch(concept, RES, CELL_SIZE, STROKE_WIDTH, model)
+        except Exception as e:
+            print(f"Error making sketch: {e}")
+            return None
+
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(make_sketch, concept, RES, CELL_SIZE, STROKE_WIDTH, model) for _ in range(n)]
-        results = [future.result() for future in tqdm(as_completed(futures), total=n) if future.result()]
+        futures = [executor.submit(make_sketch_wrapper, concept, RES, CELL_SIZE, STROKE_WIDTH, model) for _ in range(n)]
+        results = [future.result() for future in tqdm(as_completed(futures), total=n) if future and future.result()]
     return results
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=10)
     parser.add_argument("--concept", type=str, default="cat")
-    parser.add_argument("--model", type=str, default="anthropic/claude-3.5-sonnet")
+    parser.add_argument("--model", type=str, default="anthropic/claude-3.7-sonnet")
     parser.add_argument("--output_dir", type=str, default=f"results/multi/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
     return parser.parse_args()
 
